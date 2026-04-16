@@ -4,6 +4,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
 
+import java.util.List;
+
 @Document(collection = "users")
 public class User {
 
@@ -19,8 +21,14 @@ public class User {
     private String password;
     private String phoneNumber;
     private String role = "USER";
-    private String riskTolerance;
-    private String investmentGoal;
+
+    // Profil investisseur
+    private int riskLevel = 5;               // 1-10 (Prudent → Agressif)
+    private String riskTolerance;            // label: Prudent / Modéré / Agressif
+    private String investmentGoal;           // CROISSANCE / REVENUS / PRESERVATION
+    private String investmentHorizon;        // COURT / MOYEN / LONG
+    private double availableCapital = 0;
+    private List<String> sectors;
 
     // Constructeurs
     public User() {}
@@ -47,9 +55,21 @@ public class User {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
 
+    public int getRiskLevel() { return riskLevel; }
+    public void setRiskLevel(int riskLevel) { this.riskLevel = riskLevel; }
+
     public String getRiskTolerance() { return riskTolerance; }
     public void setRiskTolerance(String riskTolerance) { this.riskTolerance = riskTolerance; }
 
     public String getInvestmentGoal() { return investmentGoal; }
     public void setInvestmentGoal(String investmentGoal) { this.investmentGoal = investmentGoal; }
+
+    public String getInvestmentHorizon() { return investmentHorizon; }
+    public void setInvestmentHorizon(String investmentHorizon) { this.investmentHorizon = investmentHorizon; }
+
+    public double getAvailableCapital() { return availableCapital; }
+    public void setAvailableCapital(double availableCapital) { this.availableCapital = availableCapital; }
+
+    public List<String> getSectors() { return sectors; }
+    public void setSectors(List<String> sectors) { this.sectors = sectors; }
 }

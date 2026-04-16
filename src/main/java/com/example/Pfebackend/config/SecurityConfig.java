@@ -1,12 +1,15 @@
 package com.example.Pfebackend.config;
 
+import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -19,19 +22,24 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
+    public UserDetailsService userDetailsService() {
+        // Empêche Spring Boot d'auto-configurer JdbcUserDetailsManager
+        return new InMemoryUserDetailsManager();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Activer CORS avec notre configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // Désactiver CSRF (pas nécessaire pour une API REST)
             .csrf(csrf -> csrf.disable())
-            // Pas de session (API stateless)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // Autoriser /api/auth/** sans authentification
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/dashboard/**").permitAll()
+                .requestMatchers("/api/profile/**").permitAll()
+                .requestMatchers("/api/portfolio/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             );
 

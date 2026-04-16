@@ -65,17 +65,25 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- JPA -->
+
+        <!-- Spring JDBC (JdbcTemplate) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
-        <!-- SQL Server JDBC -->
+        <!-- SQL Server JDBC - Microsoft driver (garder pour référence) -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>12.4.2.jre11</version>
+        </dependency>
+
+        <!-- JTDS : authentification Windows pure Java (sans sqljdbc_auth.dll) -->
+        <dependency>
+            <groupId>net.sourceforge.jtds</groupId>
+            <artifactId>jtds</artifactId>
+            <version>1.3.1</version>
         </dependency>
     </dependencies>
 
