@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface PositionRepository extends MongoRepository<Position, String> {
     List<Position> findByUserId(String userId);
     Optional<Position> findByIdAndUserId(String id, String userId);
+    long countByUserId(String userId);
+    void deleteByUserId(String userId);
 }

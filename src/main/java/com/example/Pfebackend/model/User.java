@@ -30,6 +30,8 @@ public class User {
     private double availableCapital = 0;
     private List<String> sectors;
 
+    private NotificationPrefs notificationPrefs = new NotificationPrefs();
+
     // Constructeurs
     public User() {}
 
@@ -72,4 +74,7 @@ public class User {
 
     public List<String> getSectors() { return sectors; }
     public void setSectors(List<String> sectors) { this.sectors = sectors; }
+
+    public NotificationPrefs getNotificationPrefs() { return notificationPrefs; }
+    public void setNotificationPrefs(NotificationPrefs notificationPrefs) { this.notificationPrefs = notificationPrefs; }
 }

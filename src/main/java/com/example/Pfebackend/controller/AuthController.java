@@ -1,6 +1,8 @@
 package com.example.Pfebackend.controller;
 
+import com.example.Pfebackend.model.Admin;
 import com.example.Pfebackend.model.User;
+import com.example.Pfebackend.repository.AdminRepository;
 import com.example.Pfebackend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,39 +18,35 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
     public AuthController(UserRepository userRepository,
+                          AdminRepository adminRepository,
                           PasswordEncoder passwordEncoder,
                           JwtUtil jwtUtil) {
         this.userRepository = userRepository;
+        this.adminRepository = adminRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
     }
 
-    // ─────────────────────────────────────────
-    // POST /api/auth/register
-    // Body: { email, password, firstName, lastName, phoneNumber?, role?, riskTolerance?, investmentGoal? }
-    // ─────────────────────────────────────────
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String password = request.get("password");
+        String email     = request.get("email");
+        String password  = request.get("password");
         String firstName = request.get("firstName");
-        String lastName = request.get("lastName");
+        String lastName  = request.get("lastName");
 
-        // Vérifier email déjà utilisé
         if (userRepository.existsByEmail(email)) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("message", "Cet email est déjà utilisé.");
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Cet email est déjà utilisé."));
         }
 
-        // Créer et sauvegarder l'utilisateur
         User user = new User();
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));  // Mot de passe hashé
+        user.setPassword(passwordEncoder.encode(password));
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setPhoneNumber(request.get("phoneNumber"));
@@ -56,53 +54,57 @@ public class AuthController {
         user.setRiskTolerance(request.get("riskTolerance"));
         user.setInvestmentGoal(request.get("investmentGoal"));
 
-        User savedUser = userRepository.save(user);
+        User saved = userRepository.save(user);
+        String token = jwtUtil.generateToken(saved.getEmail(), saved.getId());
 
-        // Générer le token JWT
-        String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getId());
-
-        // Retourner la réponse attendue par Angular (AuthResponse)
         Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("id", savedUser.getId());
-        response.put("email", savedUser.getEmail());
-        response.put("firstName", savedUser.getFirstName());
-        response.put("lastName", savedUser.getLastName());
-        response.put("role", savedUser.getRole());
-        response.put("riskTolerance", savedUser.getRiskTolerance());
-
+        response.put("token",         token);
+        response.put("id",            saved.getId());
+        response.put("email",         saved.getEmail());
+        response.put("firstName",     saved.getFirstName());
+        response.put("lastName",      saved.getLastName());
+        response.put("role",          saved.getRole());
+        response.put("riskTolerance", saved.getRiskTolerance());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ─────────────────────────────────────────
-    // POST /api/auth/login
-    // Body: { email, password }
-    // ─────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
+        String email    = request.get("email");
         String password = request.get("password");
 
-        Optional<User> optionalUser = userRepository.findByEmail(email);
-
-        if (optionalUser.isEmpty() || !passwordEncoder.matches(password, optionalUser.get().getPassword())) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("message", "Email ou mot de passe incorrect.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+        // Check admin collection first
+        Optional<Admin> optAdmin = adminRepository.findByEmail(email);
+        if (optAdmin.isPresent() && passwordEncoder.matches(password, optAdmin.get().getPassword())) {
+            Admin admin  = optAdmin.get();
+            String token = jwtUtil.generateToken(admin.getEmail(), admin.getId());
+            Map<String, Object> response = new HashMap<>();
+            response.put("token",     token);
+            response.put("id",        admin.getId());
+            response.put("email",     admin.getEmail());
+            response.put("firstName", admin.getFirstName());
+            response.put("lastName",  admin.getLastName());
+            response.put("role",      "ADMIN");
+            return ResponseEntity.ok(response);
         }
 
-        User user = optionalUser.get();
-        String token = jwtUtil.generateToken(user.getEmail(), user.getId());
+        // Then check regular users
+        Optional<User> optUser = userRepository.findByEmail(email);
+        if (optUser.isPresent() && passwordEncoder.matches(password, optUser.get().getPassword())) {
+            User user    = optUser.get();
+            String token = jwtUtil.generateToken(user.getEmail(), user.getId());
+            Map<String, Object> response = new HashMap<>();
+            response.put("token",         token);
+            response.put("id",            user.getId());
+            response.put("email",         user.getEmail());
+            response.put("firstName",     user.getFirstName());
+            response.put("lastName",      user.getLastName());
+            response.put("role",          user.getRole());
+            response.put("riskTolerance", user.getRiskTolerance());
+            return ResponseEntity.ok(response);
+        }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("id", user.getId());
-        response.put("email", user.getEmail());
-        response.put("firstName", user.getFirstName());
-        response.put("lastName", user.getLastName());
-        response.put("role", user.getRole());
-        response.put("riskTolerance", user.getRiskTolerance());
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", "Email ou mot de passe incorrect."));
     }
 }
