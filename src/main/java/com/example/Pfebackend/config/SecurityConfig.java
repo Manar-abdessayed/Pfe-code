@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/portfolio/**").permitAll()
                 .requestMatchers("/api/settings/**").permitAll()
                 .requestMatchers("/api/admin/**").permitAll()
+                .requestMatchers("/api/assistant/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             );

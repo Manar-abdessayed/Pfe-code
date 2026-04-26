@@ -134,6 +134,109 @@ public class DashboardController {
         );
     }
 
+    @GetMapping("/signal-distribution")
+    public Map<String, Object> getSignalDistribution() {
+        String lastDate = jdbcTemplate.queryForObject(
+            "SELECT CONVERT(varchar, MAX(session_date), 23) FROM fact_technical_indicators",
+            String.class
+        );
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT signal_rsi, signal_macd, signal_bb FROM fact_technical_indicators WHERE session_date = ?",
+            lastDate
+        );
+        int buy = 0, sell = 0, hold = 0;
+        for (Map<String, Object> row : rows) {
+            String global = computeGlobalSignal(
+                String.valueOf(row.get("signal_rsi")),
+                String.valueOf(row.get("signal_macd")),
+                String.valueOf(row.get("signal_bb"))
+            );
+            if ("Achat".equals(global)) buy++;
+            else if ("Vente".equals(global)) sell++;
+            else hold++;
+        }
+        int total = buy + sell + hold;
+        Map<String, Object> result = new HashMap<>();
+        result.put("buy", buy);
+        result.put("sell", sell);
+        result.put("hold", hold);
+        result.put("total", total);
+        return result;
+    }
+
+    @GetMapping("/volume-trend")
+    public List<Map<String, Object>> getVolumeTrend() {
+        return jdbcTemplate.queryForList(
+            "SELECT CONVERT(varchar, session_date, 23) as date, SUM(volume) as totalVolume " +
+            "FROM fact_ohlcv_daily " +
+            "WHERE session_date >= DATEADD(day, -30, GETDATE()) " +
+            "GROUP BY session_date ORDER BY session_date"
+        );
+    }
+
+    @GetMapping("/rsi-zones")
+    public Map<String, Object> getRsiZones() {
+        String lastDate = jdbcTemplate.queryForObject(
+            "SELECT CONVERT(varchar, MAX(session_date), 23) FROM fact_technical_indicators",
+            String.class
+        );
+        Map<String, Object> result = jdbcTemplate.queryForMap(
+            "SELECT " +
+            "SUM(CASE WHEN rsi_14 < 30 THEN 1 ELSE 0 END) as oversold, " +
+            "SUM(CASE WHEN rsi_14 >= 30 AND rsi_14 <= 70 THEN 1 ELSE 0 END) as neutral, " +
+            "SUM(CASE WHEN rsi_14 > 70 THEN 1 ELSE 0 END) as overbought, " +
+            "COUNT(*) as total " +
+            "FROM fact_technical_indicators WHERE session_date = ?",
+            lastDate
+        );
+        result.put("date", lastDate);
+        return result;
+    }
+
+    @GetMapping("/market-volatility")
+    public List<Map<String, Object>> getMarketVolatility() {
+        String lastDate = jdbcTemplate.queryForObject(
+            "SELECT CONVERT(varchar, MAX(session_date), 23) FROM fact_technical_indicators",
+            String.class
+        );
+        return jdbcTemplate.queryForList(
+            "SELECT d.market_id, AVG(t.volatility_20d) as avgVolatility, COUNT(*) as cnt " +
+            "FROM fact_technical_indicators t " +
+            "JOIN dim_instrument d ON t.isin = d.isin " +
+            "WHERE t.session_date = ? AND t.volatility_20d IS NOT NULL " +
+            "GROUP BY d.market_id ORDER BY avgVolatility DESC",
+            lastDate
+        );
+    }
+
+    @GetMapping("/macd-trend")
+    public List<Map<String, Object>> getMacdTrend() {
+        return jdbcTemplate.queryForList(
+            "SELECT CONVERT(varchar, session_date, 23) as date, AVG(macd_hist) as avgMacd " +
+            "FROM fact_technical_indicators " +
+            "WHERE session_date >= DATEADD(day, -30, GETDATE()) AND macd_hist IS NOT NULL " +
+            "GROUP BY session_date ORDER BY session_date"
+        );
+    }
+
+    // ─── GET /api/dashboard/market-performance ───────────────────────────────
+    @GetMapping("/market-performance")
+    public List<Map<String, Object>> getMarketPerformance(
+            @RequestParam(defaultValue = "12") int months) {
+
+        return jdbcTemplate.queryForList(
+            "SELECT month, avg_variation FROM (" +
+            "  SELECT TOP " + months + " " +
+            "  CONVERT(varchar(7), session_date, 120) AS month, " +
+            "  AVG(CAST(price_variation_pct AS float)) AS avg_variation " +
+            "  FROM fact_ohlcv_daily " +
+            "  WHERE price_variation_pct IS NOT NULL " +
+            "  GROUP BY CONVERT(varchar(7), session_date, 120) " +
+            "  ORDER BY month DESC" +
+            ") sub ORDER BY month ASC"
+        );
+    }
+
     private String computeGlobalSignal(String rsi, String macd, String bb) {
         int buy = 0, sell = 0;
         if ("BUY".equalsIgnoreCase(rsi) || "Achat".equalsIgnoreCase(rsi)) buy++;
