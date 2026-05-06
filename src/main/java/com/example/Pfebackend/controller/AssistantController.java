@@ -18,7 +18,7 @@ public class AssistantController {
     @Autowired
     private AssistantMessageRepository messageRepository;
 
-    @Value("${n8n.webhook.url:http://localhost:5678/webhook/invest-ia-chat}")
+    @Value("${n8n.webhook.url:http://localhost:5678/webhook/investia-chat}")
     private String n8nWebhookUrl;
 
     // ─── GET /api/assistant/{userId}/history ────────────────────────────────────

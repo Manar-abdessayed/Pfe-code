@@ -463,7 +463,8 @@ public class PortfolioController {
         if (positions.isEmpty()) return List.of();
 
         LocalDate today = LocalDate.now();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM");
+        DateTimeFormatter displayFmt = DateTimeFormatter.ofPattern("dd/MM");
+        DateTimeFormatter monthFmt   = DateTimeFormatter.ofPattern("yyyy-MM");
 
         Map<String, LocalDate> parsedDates = new LinkedHashMap<>();
         for (Position p : positions) {
@@ -474,37 +475,41 @@ public class PortfolioController {
 
         LocalDate earliest = parsedDates.values().stream()
                 .min(Comparator.naturalOrder())
-                .orElse(today.minusMonths(1));
+                .orElse(today.minusDays(30));
+
+        // Cap history to 90 days to keep payload small
+        LocalDate startDate = earliest.isBefore(today.minusDays(90))
+                ? today.minusDays(90)
+                : earliest;
 
         List<Map<String, Object>> result = new ArrayList<>();
-        LocalDate cursor = earliest.withDayOfMonth(1);
-        LocalDate end    = today.withDayOfMonth(1);
+        LocalDate cursor = startDate;
 
-        while (!cursor.isAfter(end)) {
-            final LocalDate monthEnd = cursor.plusMonths(1).minusDays(1);
-            double monthValue = 0;
+        while (!cursor.isAfter(today)) {
+            final LocalDate day = cursor;
+            double dayValue = 0;
 
             for (Position pos : positions) {
                 LocalDate purchaseDate = parsedDates.get(pos.getId());
-                if (purchaseDate == null || purchaseDate.isAfter(monthEnd)) continue;
+                if (purchaseDate == null || purchaseDate.isAfter(day)) continue;
 
                 long totalDays   = ChronoUnit.DAYS.between(purchaseDate, today);
-                long elapsedDays = ChronoUnit.DAYS.between(purchaseDate,
-                        cursor.isAfter(purchaseDate) ? cursor : purchaseDate);
+                long elapsedDays = ChronoUnit.DAYS.between(purchaseDate, day);
                 elapsedDays = Math.max(0, Math.min(elapsedDays, totalDays));
 
                 double progress = totalDays == 0 ? 1.0 : (double) elapsedDays / totalDays;
                 double price    = pos.getPurchasePrice()
                         + (pos.getCurrentPrice() - pos.getPurchasePrice()) * progress;
-                monthValue += pos.getQuantity() * price;
+                dayValue += pos.getQuantity() * price;
             }
 
             Map<String, Object> point = new LinkedHashMap<>();
-            point.put("month", cursor.format(fmt));
-            point.put("value", round2(monthValue));
+            point.put("month",    day.format(displayFmt));  // "dd/MM" for X-axis display
+            point.put("monthKey", day.format(monthFmt));    // "yyyy-MM" for benchmark lookup
+            point.put("value",    round2(dayValue));
             result.add(point);
 
-            cursor = cursor.plusMonths(1);
+            cursor = cursor.plusDays(1);
         }
 
         return result;
