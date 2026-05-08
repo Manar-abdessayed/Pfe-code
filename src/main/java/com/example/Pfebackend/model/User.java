@@ -32,6 +32,9 @@ public class User {
 
     private NotificationPrefs notificationPrefs = new NotificationPrefs();
 
+    private String resetPasswordToken;
+    private Long resetPasswordTokenExpiry;
+
     // Constructeurs
     public User() {}
 
@@ -77,4 +80,10 @@ public class User {
 
     public NotificationPrefs getNotificationPrefs() { return notificationPrefs; }
     public void setNotificationPrefs(NotificationPrefs notificationPrefs) { this.notificationPrefs = notificationPrefs; }
+
+    public String getResetPasswordToken() { return resetPasswordToken; }
+    public void setResetPasswordToken(String resetPasswordToken) { this.resetPasswordToken = resetPasswordToken; }
+
+    public Long getResetPasswordTokenExpiry() { return resetPasswordTokenExpiry; }
+    public void setResetPasswordTokenExpiry(Long resetPasswordTokenExpiry) { this.resetPasswordTokenExpiry = resetPasswordTokenExpiry; }
 }
