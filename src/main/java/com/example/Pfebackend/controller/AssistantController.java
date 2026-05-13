@@ -49,6 +49,7 @@ public class AssistantController {
         if (userInput.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Message vide."));
         }
+        String email = body.getOrDefault("email", "");
 
         // Persist user message
         messageRepository.save(new AssistantMessage(userId, "user", userInput));
@@ -63,6 +64,7 @@ public class AssistantController {
             Map<String, String> n8nPayload = new LinkedHashMap<>();
             n8nPayload.put("chatInput", userInput);
             n8nPayload.put("sessionId", userId);
+            n8nPayload.put("email", email);
 
             HttpEntity<Map<String, String>> req = new HttpEntity<>(n8nPayload, headers);
 
