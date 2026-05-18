@@ -52,17 +52,17 @@ public class DashboardController {
             "SELECT CONVERT(varchar, MAX(session_date), 23) FROM fact_ohlcv_daily",
             String.class
         );
-        List<Map<String, Object>> gainers = jdbcTemplate.queryForList(
-            "SELECT TOP 5 f.isin, f.symbol, d.short_name, f.close_price, f.price_variation_pct " +
+        String varExpr = "CAST((f.close_price - f.open_price) / NULLIF(f.open_price, 0) * 100 AS FLOAT)";
+        String moversBase =
+            "SELECT TOP 5 f.isin, f.symbol, d.short_name, f.close_price, " +
+            varExpr + " AS price_variation_pct " +
             "FROM fact_ohlcv_daily f JOIN dim_instrument d ON f.isin = d.isin " +
-            "WHERE f.session_date = ? AND f.price_variation_pct IS NOT NULL " +
-            "ORDER BY f.price_variation_pct DESC", lastDate
+            "WHERE f.session_date = ? AND f.open_price > 0 AND f.close_price IS NOT NULL ";
+        List<Map<String, Object>> gainers = jdbcTemplate.queryForList(
+            moversBase + "AND f.close_price >= f.open_price ORDER BY " + varExpr + " DESC", lastDate
         );
         List<Map<String, Object>> losers = jdbcTemplate.queryForList(
-            "SELECT TOP 5 f.isin, f.symbol, d.short_name, f.close_price, f.price_variation_pct " +
-            "FROM fact_ohlcv_daily f JOIN dim_instrument d ON f.isin = d.isin " +
-            "WHERE f.session_date = ? AND f.price_variation_pct IS NOT NULL " +
-            "ORDER BY f.price_variation_pct ASC", lastDate
+            moversBase + "AND f.close_price < f.open_price ORDER BY " + varExpr + " ASC", lastDate
         );
         Map<String, Object> result = new HashMap<>();
         result.put("date", lastDate);
@@ -104,11 +104,11 @@ public class DashboardController {
         );
         Map<String, Object> stats = jdbcTemplate.queryForMap(
             "SELECT COUNT(*) as totalInstruments, " +
-            "SUM(CASE WHEN price_variation_pct > 0 THEN 1 ELSE 0 END) as hausse, " +
-            "SUM(CASE WHEN price_variation_pct < 0 THEN 1 ELSE 0 END) as baisse, " +
-            "SUM(CASE WHEN price_variation_pct = 0 THEN 1 ELSE 0 END) as stable, " +
-            "AVG(price_variation_pct) as variationMoyenne, " +
-            "SUM(volume) as volumeTotal " +
+            "SUM(CASE WHEN close_price > open_price THEN 1 ELSE 0 END) as hausse, " +
+            "SUM(CASE WHEN close_price < open_price THEN 1 ELSE 0 END) as baisse, " +
+            "SUM(CASE WHEN close_price IS NULL OR open_price IS NULL OR close_price = open_price THEN 1 ELSE 0 END) as stable, " +
+            "AVG(CAST((close_price - open_price) / NULLIF(open_price, 0) * 100 AS FLOAT)) as variationMoyenne, " +
+            "SUM(COALESCE(volume, 0)) as volumeTotal " +
             "FROM fact_ohlcv_daily WHERE session_date = ?", lastDate
         );
         stats.put("date", lastDate);
@@ -169,7 +169,7 @@ public class DashboardController {
         return jdbcTemplate.queryForList(
             "SELECT CONVERT(varchar, session_date, 23) as date, SUM(volume) as totalVolume " +
             "FROM fact_ohlcv_daily " +
-            "WHERE session_date >= DATEADD(day, -30, GETDATE()) " +
+            "WHERE session_date >= DATEADD(day, -30, (SELECT MAX(session_date) FROM fact_ohlcv_daily)) " +
             "GROUP BY session_date ORDER BY session_date"
         );
     }
@@ -214,7 +214,7 @@ public class DashboardController {
         return jdbcTemplate.queryForList(
             "SELECT CONVERT(varchar, session_date, 23) as date, AVG(macd_hist) as avgMacd " +
             "FROM fact_technical_indicators " +
-            "WHERE session_date >= DATEADD(day, -30, GETDATE()) AND macd_hist IS NOT NULL " +
+            "WHERE session_date >= DATEADD(day, -30, (SELECT MAX(session_date) FROM fact_technical_indicators)) AND macd_hist IS NOT NULL " +
             "GROUP BY session_date ORDER BY session_date"
         );
     }

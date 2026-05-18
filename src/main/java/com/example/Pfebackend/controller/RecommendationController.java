@@ -39,4 +39,18 @@ public class RecommendationController {
             "count", recs.size()
         ));
     }
+
+    /**
+     * POST /api/recommendations/save-batch
+     * Saves a list of recommendations parsed by the frontend (n8n agent flow).
+     * Replaces all current active recommendations.
+     */
+    @PostMapping("/save-batch")
+    public ResponseEntity<Map<String, Object>> saveBatch(@RequestBody List<Recommendation> recs) {
+        List<Recommendation> saved = recommendationService.saveBatch(recs);
+        return ResponseEntity.ok(Map.of(
+            "message", "Recommandations sauvegardées",
+            "count", saved.size()
+        ));
+    }
 }

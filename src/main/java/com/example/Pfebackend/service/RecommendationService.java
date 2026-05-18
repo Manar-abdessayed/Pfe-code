@@ -27,6 +27,18 @@ public class RecommendationService {
 
     // ─── Public API ────────────────────────────────────────────────────────────
 
+    public List<Recommendation> saveBatch(List<Recommendation> recs) {
+        if (recs == null || recs.isEmpty()) return List.of();
+        recommendationRepository.deleteByActive(true);
+        LocalDateTime now = LocalDateTime.now();
+        recs.forEach(r -> {
+            r.setActive(true);
+            r.setId(null);
+            if (r.getCreatedAt() == null) r.setCreatedAt(now);
+        });
+        return recommendationRepository.saveAll(recs);
+    }
+
     public List<Recommendation> getActive(String filter) {
         if (filter == null || filter.isBlank() || "all".equalsIgnoreCase(filter)) {
             return recommendationRepository.findByActiveOrderByConfidenceDesc(true);

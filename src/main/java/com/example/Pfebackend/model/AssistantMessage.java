@@ -16,31 +16,43 @@ public class AssistantMessage {
     @Indexed
     private String userId;
 
+    @Indexed
+    private String conversationId;
+
     private String role;      // "user" | "bot"
     private String content;
     private String createdAt; // ISO datetime
 
     public AssistantMessage() {}
 
-    public AssistantMessage(String userId, String role, String content) {
-        this.userId    = userId;
-        this.role      = role;
-        this.content   = content;
-        this.createdAt = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+    public AssistantMessage(String userId, String conversationId, String role, String content) {
+        this.userId         = userId;
+        this.conversationId = conversationId;
+        this.role           = role;
+        this.content        = content;
+        this.createdAt      = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
     }
 
-    public String getId()        { return id; }
-    public void   setId(String id) { this.id = id; }
+    /** Legacy constructor — kept for backward compatibility (no conversation). */
+    public AssistantMessage(String userId, String role, String content) {
+        this(userId, null, role, content);
+    }
 
-    public String getUserId()          { return userId; }
-    public void   setUserId(String v)  { this.userId = v; }
+    public String getId()                       { return id; }
+    public void   setId(String id)              { this.id = id; }
 
-    public String getRole()          { return role; }
-    public void   setRole(String v)  { this.role = v; }
+    public String getUserId()                   { return userId; }
+    public void   setUserId(String v)           { this.userId = v; }
 
-    public String getContent()          { return content; }
-    public void   setContent(String v)  { this.content = v; }
+    public String getConversationId()           { return conversationId; }
+    public void   setConversationId(String v)   { this.conversationId = v; }
 
-    public String getCreatedAt()          { return createdAt; }
-    public void   setCreatedAt(String v)  { this.createdAt = v; }
+    public String getRole()                     { return role; }
+    public void   setRole(String v)             { this.role = v; }
+
+    public String getContent()                  { return content; }
+    public void   setContent(String v)          { this.content = v; }
+
+    public String getCreatedAt()                { return createdAt; }
+    public void   setCreatedAt(String v)        { this.createdAt = v; }
 }
