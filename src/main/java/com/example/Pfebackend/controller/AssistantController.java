@@ -21,10 +21,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/assistant")
 public class AssistantController {
+
+    private static final String NEW_CONV_TITLE = "Nouvelle conversation";
+
+    private static final Set<String> GREETINGS = Set.of(
+        "bonjour", "bonsoir", "salut", "hello", "hi", "hey", "coucou",
+        "ok", "oui", "non", "merci", "svp", "stp", "allo", "allô"
+    );
 
     @Autowired private AssistantMessageRepository messageRepository;
     @Autowired private ConversationRepository     conversationRepository;
@@ -71,7 +79,7 @@ public class AssistantController {
 
         String title = (body != null && body.containsKey("title") && !body.get("title").isBlank())
                 ? body.get("title")
-                : "Nouvelle conversation";
+                : NEW_CONV_TITLE;
 
         Conversation conv = conversationRepository.save(new Conversation(userId, title));
         return ResponseEntity.ok(conv);
@@ -141,14 +149,6 @@ public class AssistantController {
         }
         String email = body.getOrDefault("email", "");
 
-        // Auto-title from first real user message
-        if (conv.getTitle().equals("Nouvelle conversation")) {
-            String autoTitle = userInput.length() > 50
-                    ? userInput.substring(0, 50) + "…"
-                    : userInput;
-            conv.setTitle(autoTitle);
-        }
-
         // Persist user message
         messageRepository.save(new AssistantMessage(userId, conversationId, "user", userInput));
 
@@ -177,6 +177,11 @@ public class AssistantController {
 
             String botText = extractText(first);
 
+            // Auto-title: update as long as no meaningful title is set yet
+            if (NEW_CONV_TITLE.equals(conv.getTitle())) {
+                generateTitle(userInput, botText).ifPresent(conv::setTitle);
+            }
+
             // Persist bot response
             AssistantMessage botMsg = new AssistantMessage(userId, conversationId, "bot", botText);
             messageRepository.save(botMsg);
@@ -189,19 +194,33 @@ public class AssistantController {
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("response",  botText);
             result.put("messageId", botMsg.getId());
+            if (!NEW_CONV_TITLE.equals(conv.getTitle())) {
+                result.put("title", conv.getTitle());
+            }
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
             System.err.println("n8n error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             String fallback = "Je suis temporairement indisponible. "
                     + "Vérifiez que le service n8n est démarré puis réessayez.";
+
+            if (NEW_CONV_TITLE.equals(conv.getTitle()) && !isGreeting(userInput)) {
+                conv.setTitle(userInput.length() > 55 ? userInput.substring(0, 55) + "…" : userInput);
+            }
+
             messageRepository.save(new AssistantMessage(userId, conversationId, "bot", fallback));
 
             String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
             conv.setLastMessageAt(now);
             conversationRepository.save(conv);
 
-            return ResponseEntity.ok(Map.of("response", fallback, "error", true));
+            Map<String, Object> errResult = new LinkedHashMap<>();
+            errResult.put("response", fallback);
+            errResult.put("error",    true);
+            if (!NEW_CONV_TITLE.equals(conv.getTitle())) {
+                errResult.put("title", conv.getTitle());
+            }
+            return ResponseEntity.ok(errResult);
         }
     }
 
@@ -242,6 +261,36 @@ public class AssistantController {
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(120_000);
         return new RestTemplate(factory);
+    }
+
+    private boolean isGreeting(String message) {
+        return GREETINGS.contains(message.toLowerCase().trim());
+    }
+
+    /** Returns a meaningful title, or empty if the message is a greeting (defer title generation). */
+    private Optional<String> generateTitle(String userMessage, String botResponse) {
+        if (isGreeting(userMessage)) {
+            return Optional.empty();
+        }
+        // If the user message is already descriptive, use it
+        if (userMessage.length() > 20) {
+            String t = userMessage.length() > 55 ? userMessage.substring(0, 55) + "…" : userMessage;
+            return Optional.of(t);
+        }
+        // Extract from bot response (strip markdown, take first meaningful sentence)
+        String clean = botResponse
+                .replaceAll("\\*\\*(.*?)\\*\\*", "$1")
+                .replaceAll("\\*(.*?)\\*", "$1")
+                .replaceAll("(?m)^#+\\s*", "")
+                .trim();
+        for (String part : clean.split("[.!\\n]")) {
+            String t = part.trim();
+            if (t.length() > 20) {
+                return Optional.of(t.length() > 55 ? t.substring(0, 55) + "…" : t);
+            }
+        }
+        String fallback = userMessage.length() > 55 ? userMessage.substring(0, 55) + "…" : userMessage;
+        return Optional.of(fallback);
     }
 
     private String extractText(Map<?, ?> body) {

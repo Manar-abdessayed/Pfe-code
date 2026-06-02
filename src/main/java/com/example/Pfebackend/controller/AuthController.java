@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -62,6 +64,7 @@ public class AuthController {
         user.setRole(request.getOrDefault("role", "USER"));
         user.setRiskTolerance(request.get("riskTolerance"));
         user.setInvestmentGoal(request.get("investmentGoal"));
+        user.setCreatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")));
 
         User saved = userRepository.save(user);
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getId());

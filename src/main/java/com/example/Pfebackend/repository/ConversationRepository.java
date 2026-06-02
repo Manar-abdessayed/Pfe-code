@@ -12,4 +12,7 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
     List<Conversation> findByUserIdOrderByLastMessageAtDesc(String userId);
     Optional<Conversation> findByIdAndUserId(String id, String userId);
     void deleteByUserId(String userId);
+    List<Conversation> findByLastMessageAtGreaterThan(String datetime);
+    long countByUserId(String userId);
+    List<Conversation> findTop1ByUserIdOrderByLastMessageAtDesc(String userId);
 }

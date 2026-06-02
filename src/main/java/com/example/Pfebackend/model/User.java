@@ -32,6 +32,8 @@ public class User {
 
     private NotificationPrefs notificationPrefs = new NotificationPrefs();
 
+    private String createdAt;
+
     private String resetPasswordToken;
     private Long resetPasswordTokenExpiry;
 
@@ -80,6 +82,9 @@ public class User {
 
     public NotificationPrefs getNotificationPrefs() { return notificationPrefs; }
     public void setNotificationPrefs(NotificationPrefs notificationPrefs) { this.notificationPrefs = notificationPrefs; }
+
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 
     public String getResetPasswordToken() { return resetPasswordToken; }
     public void setResetPasswordToken(String resetPasswordToken) { this.resetPasswordToken = resetPasswordToken; }
