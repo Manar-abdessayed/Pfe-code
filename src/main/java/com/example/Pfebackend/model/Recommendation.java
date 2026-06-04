@@ -40,6 +40,8 @@ public class Recommendation {
     private String signalMacd;
     private String signalBb;
 
+    private String userId;
+
     private LocalDateTime createdAt;
     private boolean active;
 
@@ -49,6 +51,9 @@ public class Recommendation {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 
     public String getIsin() { return isin; }
     public void setIsin(String isin) { this.isin = isin; }

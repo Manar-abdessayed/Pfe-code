@@ -27,24 +27,34 @@ public class RecommendationService {
 
     // ─── Public API ────────────────────────────────────────────────────────────
 
-    public List<Recommendation> saveBatch(List<Recommendation> recs) {
+    public List<Recommendation> saveBatch(String userId, List<Recommendation> recs) {
         if (recs == null || recs.isEmpty()) return List.of();
-        recommendationRepository.deleteByActive(true);
+        if (userId != null && !userId.isBlank()) {
+            recommendationRepository.deleteByUserIdAndActive(userId, true);
+        } else {
+            recommendationRepository.deleteByActive(true);
+        }
         LocalDateTime now = LocalDateTime.now();
         recs.forEach(r -> {
             r.setActive(true);
             r.setId(null);
+            if (userId != null && !userId.isBlank()) r.setUserId(userId);
             if (r.getCreatedAt() == null) r.setCreatedAt(now);
         });
         return recommendationRepository.saveAll(recs);
     }
 
-    public List<Recommendation> getActive(String filter) {
+    public List<Recommendation> getActive(String userId, String filter) {
+        boolean hasUser = userId != null && !userId.isBlank();
         if (filter == null || filter.isBlank() || "all".equalsIgnoreCase(filter)) {
-            return recommendationRepository.findByActiveOrderByConfidenceDesc(true);
+            return hasUser
+                ? recommendationRepository.findByUserIdAndActiveOrderByConfidenceDesc(userId, true)
+                : recommendationRepository.findByActiveOrderByConfidenceDesc(true);
         }
         String action = mapFilterToAction(filter);
-        return recommendationRepository.findByActionAndActiveOrderByConfidenceDesc(action, true);
+        return hasUser
+            ? recommendationRepository.findByUserIdAndActionAndActiveOrderByConfidenceDesc(userId, action, true)
+            : recommendationRepository.findByActionAndActiveOrderByConfidenceDesc(action, true);
     }
 
     /**

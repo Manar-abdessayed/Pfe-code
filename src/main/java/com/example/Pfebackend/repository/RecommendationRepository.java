@@ -12,4 +12,10 @@ public interface RecommendationRepository extends MongoRepository<Recommendation
     List<Recommendation> findByActionAndActiveOrderByConfidenceDesc(String action, boolean active);
 
     void deleteByActive(boolean active);
+
+    List<Recommendation> findByUserIdAndActiveOrderByConfidenceDesc(String userId, boolean active);
+
+    List<Recommendation> findByUserIdAndActionAndActiveOrderByConfidenceDesc(String userId, String action, boolean active);
+
+    void deleteByUserIdAndActive(String userId, boolean active);
 }

@@ -17,13 +17,14 @@ public class RecommendationController {
     private RecommendationService recommendationService;
 
     /**
-     * GET /api/recommendations?filter=all|achat|vente|conserver
-     * Returns active recommendations sorted by confidence DESC.
+     * GET /api/recommendations?userId=xxx&filter=all|achat|vente|conserver
+     * Returns active recommendations for the given user, sorted by confidence DESC.
      */
     @GetMapping
     public ResponseEntity<List<Recommendation>> getRecommendations(
+            @RequestParam(required = false) String userId,
             @RequestParam(defaultValue = "all") String filter) {
-        List<Recommendation> recs = recommendationService.getActive(filter);
+        List<Recommendation> recs = recommendationService.getActive(userId, filter);
         return ResponseEntity.ok(recs);
     }
 
@@ -41,13 +42,15 @@ public class RecommendationController {
     }
 
     /**
-     * POST /api/recommendations/save-batch
-     * Saves a list of recommendations parsed by the frontend (n8n agent flow).
-     * Replaces all current active recommendations.
+     * POST /api/recommendations/save-batch?userId=xxx
+     * Saves a list of recommendations for the given user.
+     * Replaces all current active recommendations for that user.
      */
     @PostMapping("/save-batch")
-    public ResponseEntity<Map<String, Object>> saveBatch(@RequestBody List<Recommendation> recs) {
-        List<Recommendation> saved = recommendationService.saveBatch(recs);
+    public ResponseEntity<Map<String, Object>> saveBatch(
+            @RequestParam(required = false) String userId,
+            @RequestBody List<Recommendation> recs) {
+        List<Recommendation> saved = recommendationService.saveBatch(userId, recs);
         return ResponseEntity.ok(Map.of(
             "message", "Recommandations sauvegardées",
             "count", saved.size()
