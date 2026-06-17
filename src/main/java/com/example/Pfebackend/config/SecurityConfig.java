@@ -1,6 +1,5 @@
 package com.example.Pfebackend.config;
 
-import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -11,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -21,9 +21,14 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    private final JwtAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
+
     @Bean
     public UserDetailsService userDetailsService() {
-        // Empêche Spring Boot d'auto-configurer JdbcUserDetailsManager
         return new InMemoryUserDetailsManager();
     }
 
@@ -36,16 +41,11 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/dashboard/**").permitAll()
-                .requestMatchers("/api/profile/**").permitAll()
-                .requestMatchers("/api/portfolio/**").permitAll()
-                .requestMatchers("/api/settings/**").permitAll()
-                .requestMatchers("/api/admin/**").permitAll()
-                .requestMatchers("/api/assistant/**").permitAll()
-                .requestMatchers("/api/recommendations/**").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
-            );
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
